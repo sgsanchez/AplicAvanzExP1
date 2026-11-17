@@ -1,0 +1,363 @@
+{
+  "info": {
+    "_postman_id": "8f2c1b44-7f3a-4d21-9a56-1c0e5b7d9a01",
+    "name": "TurnoConnect API — Santiago Sanchez NRC 37869",
+    "description": "Colección de pruebas de la API REST de TurnoConnect.\n\nEstudiante: SANTIAGO GEOVANNY SANCHEZ CAMACHO\nNRC: 37869\nAsignatura: Aplicaciones Distribuidas — ESPE\n\nFlujo recomendado:\n1. Ejecutar 'Registrar usuario' (201).\n2. Ejecutar 'Login' (200): el token se guarda automáticamente en la variable {{token}}.\n3. Ejecutar 'Crear turno' (201): el id se guarda en {{turnoId}}.\n4. Ejecutar el resto de operaciones sobre turnos.\n5. Ejecutar 'Crear turno SIN token' para evidenciar la solicitud rechazada (401).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Autenticación",
+      "item": [
+        {
+          "name": "Registrar usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código 201 (creado)', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "pm.test('El usuario se registró correctamente', function () {",
+                  "    pm.expect(json.ok).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"santiago\",\n  \"password\": \"Santiago2026*\",\n  \"email\": \"santiago@espe.edu.ec\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/registro",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "registro"]
+            },
+            "description": "Registra un usuario nuevo. Si el usuario ya existe responde 409."
+          }
+        },
+        {
+          "name": "Login (guarda el token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código 200 (OK)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "if (json && json.datos && json.datos.token) {",
+                  "    pm.collectionVariables.set('token', json.datos.token);",
+                  "    console.log('Token JWT almacenado en {{token}}');",
+                  "}",
+                  "pm.test('Se recibió un token JWT', function () {",
+                  "    pm.expect(json.datos.token).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"santiago\",\n  \"password\": \"Santiago2026*\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Autentica al usuario y devuelve el token JWT. El token queda guardado en la variable de colección {{token}}."
+          }
+        },
+        {
+          "name": "Login con credenciales inválidas (401)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"santiago\",\n  \"password\": \"clave_incorrecta\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Evidencia de autenticación fallida."
+          }
+        },
+        {
+          "name": "Perfil del usuario autenticado",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/perfil",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "perfil"]
+            },
+            "description": "Devuelve los datos del usuario dueño del token."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Turnos (protegidas con JWT)",
+      "item": [
+        {
+          "name": "Crear turno",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código 201 (creado)', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "if (json && json.datos) {",
+                  "    pm.collectionVariables.set('turnoId', json.datos.id);",
+                  "    pm.collectionVariables.set('turnoCodigo', json.datos.codigo);",
+                  "    console.log('Turno creado: ' + json.datos.codigo);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"solicitante\": \"Ana Torres\",\n  \"tipoAtencion\": \"General\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/turnos",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "turnos"]
+            },
+            "description": "Registra un turno en estado Pendiente. El código se genera automáticamente (T-001, T-002...)."
+          }
+        },
+        {
+          "name": "Crear turno SIN token (401)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"solicitante\": \"Intruso Sin Token\",\n  \"tipoAtencion\": \"General\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/turnos",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "turnos"]
+            },
+            "description": "SOLICITUD RECHAZADA POR FALTA DE AUTENTICACIÓN — requisito explícito de la Parte 4. Debe responder 401."
+          }
+        },
+        {
+          "name": "Crear turno con datos inválidos (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"solicitante\": \"A\",\n  \"tipoAtencion\": \"Inexistente\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/turnos",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "turnos"]
+            },
+            "description": "Validación de datos obligatorios y del catálogo de tipos de atención."
+          }
+        },
+        {
+          "name": "Listar turnos",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/turnos",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "turnos"]
+            },
+            "description": "Lista todos los turnos. Admite ?estado=Pendiente"
+          }
+        },
+        {
+          "name": "Consultar turno por id",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/turnos/{{turnoId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "turnos", "{{turnoId}}"]
+            },
+            "description": "Consulta un turno específico por su identificador de MongoDB."
+          }
+        },
+        {
+          "name": "Consultar turno por código",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/turnos/codigo/{{turnoCodigo}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "turnos", "codigo", "{{turnoCodigo}}"]
+            },
+            "description": "Consulta un turno por su código legible (ej. T-001)."
+          }
+        },
+        {
+          "name": "Estadísticas generales",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/turnos/estadisticas",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "turnos", "estadisticas"]
+            },
+            "description": "Contadores por estado. Deben coincidir con la respuesta del servidor UDP."
+          }
+        },
+        {
+          "name": "Iniciar atención",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/turnos/{{turnoId}}/iniciar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "turnos", "{{turnoId}}", "iniciar"]
+            },
+            "description": "Pendiente -> En atención. Si otro usuario ya lo tomó responde 409."
+          }
+        },
+        {
+          "name": "Iniciar atención por SEGUNDA vez (409)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/turnos/{{turnoId}}/iniciar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "turnos", "{{turnoId}}", "iniciar"]
+            },
+            "description": "Evidencia del control de operaciones simultáneas: solo un usuario puede iniciar el turno."
+          }
+        },
+        {
+          "name": "Modificar estado (cambiarEstado)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"En atención\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/turnos/{{turnoId}}/estado",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "turnos", "{{turnoId}}", "estado"]
+            },
+            "description": "Modificación genérica del estado respetando las transiciones permitidas."
+          }
+        },
+        {
+          "name": "Finalizar atención",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/turnos/{{turnoId}}/finalizar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "turnos", "{{turnoId}}", "finalizar"]
+            },
+            "description": "En atención -> Finalizado."
+          }
+        },
+        {
+          "name": "Eliminar turno",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/turnos/{{turnoId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "turnos", "{{turnoId}}"]
+            },
+            "description": "Elimina el turno indicado de MongoDB."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Diagnóstico",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
+            },
+            "description": "Estado del servicio: base de datos conectada y estadísticas actuales."
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "turnoId", "value": "", "type": "string" },
+    { "key": "turnoCodigo", "value": "T-001", "type": "string" }
+  ]
+}

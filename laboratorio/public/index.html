@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TurnoConnect · Gestión de Turnos en Tiempo Real</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎫</text></svg>" />
+</head>
+<body>
+
+  <!-- ============================ ENCABEZADO ============================ -->
+  <header class="cabecera">
+    <div class="cabecera__marca">
+      <span class="cabecera__logo">🎫</span>
+      <div>
+        <h1>TurnoConnect</h1>
+        <p class="cabecera__subtitulo">Sistema distribuido de gestión de turnos</p>
+      </div>
+    </div>
+
+    <div class="cabecera__datos">
+      <div class="cabecera__estudiante">
+        <strong>SANTIAGO GEOVANNY SANCHEZ CAMACHO</strong>
+        <span>NRC 37869 · Aplicaciones Distribuidas · ESPE</span>
+      </div>
+      <div class="cabecera__estado">
+        <span id="indicadorConexion" class="punto punto--desconectado"></span>
+        <span id="textoConexion">Desconectado</span>
+        <span class="separador">|</span>
+        <span title="Navegadores conectados en tiempo real">
+          👥 <strong id="contadorClientes">0</strong> en línea
+        </span>
+      </div>
+      <button id="btnSalir" class="btn btn--fantasma oculto">Cerrar sesión</button>
+    </div>
+  </header>
+
+  <!-- ============================ LOGIN ============================ -->
+  <section id="pantallaLogin" class="login">
+    <div class="login__tarjeta">
+      <h2>Iniciar sesión</h2>
+      <p class="login__ayuda">
+        Autentíquese con JWT para administrar los turnos. Abra esta página en
+        <strong>dos navegadores distintos</strong> (con dos usuarios) para comprobar la
+        sincronización en tiempo real.
+      </p>
+
+      <form id="formLogin" class="formulario">
+        <label>
+          Usuario
+          <input type="text" id="loginNombre" placeholder="ej. santiago" required autocomplete="username" />
+        </label>
+        <label>
+          Contraseña
+          <input type="password" id="loginPassword" placeholder="mínimo 6 caracteres" required autocomplete="current-password" />
+        </label>
+
+        <div class="login__acciones">
+          <button type="submit" class="btn btn--primario">Entrar</button>
+          <button type="button" id="btnIrRegistro" class="btn btn--secundario">Crear cuenta</button>
+        </div>
+
+        <p id="loginError" class="mensaje-error oculto"></p>
+      </form>
+
+      <div class="login__pie">
+        <span>Usuarios de prueba creados por <code>npm run seed</code>:</span>
+        <code>santiago / Santiago2026*</code> · <code>maria / Maria2026*</code>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ APLICACIÓN ============================ -->
+  <main id="pantallaApp" class="oculto">
+
+    <!-- Resumen de indicadores -->
+    <section class="indicadores">
+      <article class="indicador indicador--pendiente">
+        <span class="indicador__etiqueta">Pendientes</span>
+        <strong class="indicador__valor" id="statPendientes">0</strong>
+      </article>
+      <article class="indicador indicador--atencion">
+        <span class="indicador__etiqueta">En atención</span>
+        <strong class="indicador__valor" id="statEnAtencion">0</strong>
+      </article>
+      <article class="indicador indicador--finalizado">
+        <span class="indicador__etiqueta">Finalizados</span>
+        <strong class="indicador__valor" id="statFinalizados">0</strong>
+      </article>
+      <article class="indicador indicador--total">
+        <span class="indicador__etiqueta">Total</span>
+        <strong class="indicador__valor" id="statTotal">0</strong>
+      </article>
+    </section>
+
+    <!-- Registro de turno + filtros -->
+    <section class="panel">
+      <div class="panel__encabezado">
+        <h2>Registrar nuevo turno</h2>
+        <span class="panel__nota">Se guarda en MongoDB mediante la API REST protegida con JWT</span>
+      </div>
+
+      <form id="formTurno" class="formulario formulario--fila">
+        <label>
+          Nombre del solicitante
+          <input type="text" id="turnoSolicitante" placeholder="ej. Ana Torres" required minlength="3" maxlength="80" />
+        </label>
+        <label>
+          Tipo de atención
+          <select id="turnoTipo" required>
+            <option value="General">General</option>
+            <option value="Preferencial">Preferencial</option>
+            <option value="Trámites">Trámites</option>
+            <option value="Soporte Técnico">Soporte Técnico</option>
+          </select>
+        </label>
+        <button type="submit" class="btn btn--primario">Crear turno</button>
+      </form>
+    </section>
+
+    <!-- Tabla de turnos -->
+    <section class="panel">
+      <div class="panel__encabezado">
+        <h2>Turnos registrados</h2>
+        <div class="filtros" id="filtros">
+          <button class="chip chip--activo" data-filtro="">Todos</button>
+          <button class="chip" data-filtro="Pendiente">Pendiente</button>
+          <button class="chip" data-filtro="En atención">En atención</button>
+          <button class="chip" data-filtro="Finalizado">Finalizado</button>
+        </div>
+      </div>
+
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Solicitante</th>
+              <th>Tipo</th>
+              <th>Estado</th>
+              <th>Registro</th>
+              <th>Responsable</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="cuerpoTabla">
+            <tr>
+              <td colspan="7" class="tabla__vacia">Conectando con el servidor…</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Bitácora en vivo -->
+    <section class="panel">
+      <div class="panel__encabezado">
+        <h2>Actividad en tiempo real</h2>
+        <span class="panel__nota">Eventos recibidos por WebSocket (Socket.IO)</span>
+      </div>
+      <ul id="bitacora" class="bitacora">
+        <li class="bitacora__vacia">Esperando eventos…</li>
+      </ul>
+    </section>
+
+  </main>
+
+  <!-- Notificaciones flotantes -->
+  <div id="toasts" class="toasts"></div>
+
+  <!-- Cliente de Socket.IO servido automáticamente por el servidor -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+# Material institucional del docente (no se publica)
+Original/
+
+# Entregables del examen (informe, capturas, guion): no se versionan
+Entregables/
+
+# Dependencias y datos locales
+node_modules/
+.mongodb/
+
+# Credenciales y variables de entorno
+.env
+.env.local
+*.env
+!.env.example
+
+# Temporales de Office / sistema / editor
+~$*
+*.tmp
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
+
+# Entregables comprimidos
+*.zip
